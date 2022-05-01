@@ -1,1 +1,1 @@
-![Cat](https://thecatapi.com/api/images/get?format=src)
+![Cat](https://thecatapi.com/api/images/get?format=src&type=jpg)
