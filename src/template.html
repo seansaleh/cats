@@ -10,6 +10,13 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="/assets/icon.png">
+    <script>
+        // TODO: It should be possible to capture and edit the img tag if we have a picture cached
+        // https://hacks.mozilla.org/2013/03/capturing-improving-performance-of-the-adaptive-web/
+        console.log("hello world");
+    </script>
+    <script src="./components/image-loader.js"></script>
+    <!-- <link rel="preload" as="image" type="image/jpeg" href="/assets/precached-image.jpg"> -->
     <% preact.headEnd %>
 </head>
 
