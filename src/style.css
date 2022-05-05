@@ -8,10 +8,32 @@ body {
     width: 100%;
 }
 
-.wrapperDiv {
+.FullDiv {
+    height: 100%;
+    width: 100%;
+}
+
+.PageGrid {  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1.5fr 0.5fr;
+  gap: 0px 0px;
+  grid-auto-flow: column;
+  width: 100%;
+  height: 100%;
+}
+
+.PhotoWrapper { grid-area: 1 / 1 / 4 / 4; }
+
+.PhotoButtons { 
+  grid-area: 3 / 2 / 4 / 3; 
+  z-index: 1;
+}
+
+
+.PhotoFrame {
     position: fixed;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
     width: 100%;
@@ -20,10 +42,21 @@ body {
     left: 0;
 }
 
-#photo {
+.PhotoDisplay {
     max-height: 95%;
     max-width: 95%;
     border-radius: 8px;
+}
+
+/* https://stackoverflow.com/questions/980855/inputting-a-default-image-in-case-the-src-attribute-of-an-html-img-is-not-vali/980948#980948 */
+.PhotoPreload {
+  content: ' ';
+  /* min-height: 500px; */
+  background-image: url("https://source.unsplash.com/collection/139386/500x500"), linear-gradient(#e7dfdd, #f3efd5, #e7dfdd);
+  height: 500px;
+  aspect-ratio: 1;
+  background-size: contain;
+  background-repeat: no-repeat;
 }
 
 svg {
@@ -499,6 +532,8 @@ svg {
     justify-content: center;
     align-items: center;
     overflow: hidden;
+      position: absolute;
+      z-index:3;
     /* background-color: #e7dfdd;
     background-image: linear-gradient(#e7dfdd, #f3efd5, #e7dfdd); */
   }

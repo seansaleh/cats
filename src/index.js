@@ -6,7 +6,7 @@ import Photos from './components/photos.js'
 export default class Index extends Component {
     render() {
         return (
-            <div>
+            <div class="FullDiv">
                 <Background />
                 <Photos />
             </div>

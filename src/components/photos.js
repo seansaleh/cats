@@ -6,8 +6,11 @@ import { Component } from 'preact';
 const url = "https://source.unsplash.com/collection/139386?"
 // const url = "https://thecatapi.com/api/images/get?format=src";
 
-const curentIndexStorageKey = 'current-index'
-const imagesListStorageKey = 'image-urls'
+const curentIndexStorageKey = 'current-index';
+const imagesListStorageKey = 'image-urls';
+const imageCacheName = "image-cache";
+const maxImagesToPreloadAtOnce = 6;
+const timeToShowLoaderMs = 2790;
 
 // TODO: if you want to try to do move MVC https://github.dev/developit/preact-todomvc/tree/master/src/app
 
@@ -16,28 +19,53 @@ async function getCachedUrls(cacheName, cb) {
     return (cb) ? cb(urls) : urls
 }
 
+async function doesUrlExistInCache(cacheName, url) {
+    const foundInCache = await (await caches.open(cacheName)).match(new Request(url), { ignoreVary: true, ignoreMethod: true, ignoreSearch: true });
+    return foundInCache != undefined;
+}
+
 function getImagesListFromStorage() {
-    return store(imagesListStorageKey) || [
-        "https://source.unsplash.com/collection/139386/500x500",
-    ];
+    return store(imagesListStorageKey) || [];
 }
 function setImagesListToStorage(imagesList) {
     return store(imagesListStorageKey, imagesList);
 }
 
 function getCurrentIndexFromStorage() {
-    var result = parseInt(store(curentIndexStorageKey)) || 0;
+    var result = parseInt(store(curentIndexStorageKey)) || -1;
     console.log("get index: ", result)
     return result;
 }
 
 function setCurrentIndexToStorage(index) {
-    console.log("set index: ", index)
     store(curentIndexStorageKey, index);
 }
 
-function getImageUrlToLoad() {
+//TODO: useFallbackUrl
+function getImageUrlToLoad(useFallbackUrl) {
     return url + Math.random();
+}
+
+async function preloadImage(useFallbackUrl, specificUrl) {
+    var urlToLoad = specificUrl ?? getImageUrlToLoad(useFallbackUrl);
+    var result = await fetch(urlToLoad, { referrer: "" });
+    var cache = await caches.open(imageCacheName)
+
+    if (await doesUrlExistInCache(imageCacheName, result.url)) {
+        console.warn("We already have this URL in our cache, thus we are not adding it anywhere.", result.url)
+        return null;
+    } else {
+        var myResponse = new Response(result.body, {
+            "status": 200,
+            "statusText": "OK",
+            "cache-control": "public, max-age=315360000",
+            "content-length": result.headers["content-length"],
+            "content-type": result.headers["content-type"],
+        });
+        await cache.put(result.url, myResponse);
+
+        return result.url;
+    }
 }
 
 export default class Photos extends Component {
@@ -46,132 +74,190 @@ export default class Photos extends Component {
         this.images = getImagesListFromStorage();
         this.state = {
             currentIndex: getCurrentIndexFromStorage(),
-            showingLoader: true
+            showingLoader: false,
+            currentImage: "",
         }
+
+        if (this.state.currentIndex > -1) {
+            this.state.currentImage = this.images[this.state.currentIndex];
+        }
+
+        this.countOfImagesPreloading = 0;
+        this.useFallbackUrl = false;
+        this.currentMaxNumberOfImagesToPreload = 2;
+
         this.reconcileCachedImagesWithList = this.reconcileCachedImagesWithList.bind(this);
         this.preloadImages = this.preloadImages.bind(this);
         this.goToPrevPhoto = this.goToPrevPhoto.bind(this);
         this.goToNextPhoto = this.goToNextPhoto.bind(this);
         this.pushToImagesList = this.pushToImagesList.bind(this);
-        this.updatePointer = this.updatePointer.bind(this)
-        this.showLoader = this.showLoader.bind(this)
-        this.endShowingLoader = this.endShowingLoader.bind(this)
+        this.updatePointer = this.updateCurrentPhoto.bind(this);
+        this.showLoader = this.showLoader.bind(this);
+        this.endShowingLoader = this.endShowingLoader.bind(this);
+        this.calculateNumberOfImagesToPreloadAtOnce = this.calculateNumberOfImagesToPreloadAtOnce.bind(this);
 
-        this.preloadImages(1);
+        this.preloadImages();
     }
     // https://stackoverflow.com/questions/53368714/reactjs-change-current-image-being-displayed-using-prev-and-next-buttons
 
     reconcileCachedImagesWithList() {
         getCachedUrls("image-cache").then((imagesInCache) => {
-            if(imagesInCache.length === 0) {
+            if (imagesInCache.length === 0) {
                 console.warn("No items found in cache! Therefore we are not trimming the images to browse list.");
                 return;
-            } 
+            }
             var itemsStillCached = this.images.filter(x => {
                 return imagesInCache.indexOf(x) > -1;
             })
-            
-            if(itemsStillCached.length != this.images.length) {
-                console.log("Items were missing from the cache, thus we need to cleanup our stack of images to look over.", {"imagesInCache": imagesInCache, "this.images": this.images, "itemsStillCached": itemsStillCached});
+
+            if (itemsStillCached.length != this.images.length) {
+                console.log("Items were missing from the cache, thus we need to cleanup our stack of images to look over.", { "imagesInCache": imagesInCache, "this.images": this.images, "itemsStillCached": itemsStillCached });
                 this.images = itemsStillCached;
                 setImagesListToStorage(this.images);
 
-                if(this.state.currentIndex >= this.images.length) {
+                if (this.state.currentIndex >= this.images.length) {
                     console.warn("We were browsing past the end of the newly cleaned up stack of images, thus we need to reset our index.");
-                    this.updatePointer(this.images.length -1);
+                    this.updateCurrentPhoto(this.images.length - 1);
                 }
             }
         })
     }
 
-    onStateUpdate() {
+    componentDidUpdate() {
         setCurrentIndexToStorage(this.state.currentIndex);
     }
-    goToPrevPhoto() {
-        const { currentIndex } = this.state;
-        const newPointer = currentIndex === 0 ? 0 : currentIndex - 1;
-        if(newPointer == 0) {
-            this.showLoader();
-        }
-        this.updatePointer(newPointer);
+    componentWillUnmount() {
+        this.endShowingLoader();
     }
 
+    goToPrevPhoto() {
+        const { currentIndex } = this.state;
+        const newPointer = currentIndex === -1 ? -1 : currentIndex - 1;
+        if (currentIndex === -1) {
+            // As an easter egg show the loader when you try to go back.
+            // No callback means that it will just do one loop!
+            this.showLoader();
+        }
+        else {
+            this.endShowingLoader()
+        }
+        this.updateCurrentPhoto(newPointer);
+    }
+
+    // Can be called as much as you want.
+    // Will call itself and wait with the loader for new images
+    // If you call lots of times while waiting for loading it will look for a new photo and try to get it!
     goToNextPhoto() {
         const { currentIndex } = this.state;
         var newPointer;
 
-        if (currentIndex === this.images.length - 1) {
-            this.showLoader();
-            newPointer = currentIndex;
+        // These commands are both safe to run as much as you want
+        this.reconcileCachedImagesWithList();
+        // This command won't kick off more work unless there's space in the queue
+        this.preloadImages();
 
+        if (currentIndex === this.images.length - 1) {
+            // Show loader and after a timeout try again to go to the next photo
+            this.showLoader(this.goToNextPhoto);
+            newPointer = currentIndex;
         } else {
             this.endShowingLoader();
             newPointer = currentIndex + 1;
+            this.updateCurrentPhoto(newPointer);
         }
-
-        this.updatePointer(newPointer);
-        this.preloadImages();
-        this.reconcileCachedImagesWithList();
     }
 
-    updatePointer(newPointer) {
+    updateCurrentPhoto(newPointer) {
         this.setState((state) => {
             state.currentIndex = newPointer;
+            if (state.currentIndex === -1) {
+                state.currentImage = ""
+            } else {
+                state.currentImage = this.images[newPointer];
+            }
             return state;
         });
     }
 
-    showLoader() {
-        console.log("Showing Loader")
+    showLoader(cb) {
         this.setState((state) => {
             state.showingLoader = true;
             return state;
         });
+
+        if (!this.timeout) {
+            console.log("Showing Loader & Setting timeout to retry next photo");
+            this.timeout = setTimeout(function () {
+                // After x time stop showing the loader.
+                // If the callback still wants the loader we can call showLoader again and no state will change because react.
+                this.endShowingLoader();
+
+                cb ? cb() : null;
+            }.bind(this), timeToShowLoaderMs);
+        }
     }
 
     endShowingLoader() {
-        console.log("Stopping Loader")
         this.setState((state) => {
             state.showingLoader = false;
             return state;
         });
+
+        if (this.timeout) {
+            clearTimeout(this.timeout);
+            this.timeout = null;
+        }
     }
-    
+
     pushToImagesList(newImageUrl) {
         this.images.push(newImageUrl);
         setImagesListToStorage(this.images);
     }
 
-    preloadImages(count) {
-        if (!count) {
-            var imagesLeftInQueue = this.images.length - (this.state.currentIndex + 1)
-            count = Math.max(0, 5 - imagesLeftInQueue)
-        }
+    calculateNumberOfImagesToPreloadAtOnce() {
+        var imagesLeftInQueue = this.images.length - (this.state.currentIndex + 1);
+        return Math.max(0, this.currentMaxNumberOfImagesToPreload - imagesLeftInQueue - this.countOfImagesPreloading);
+    }
+
+    preloadImages() {
+        let count = this.calculateNumberOfImagesToPreloadAtOnce();
         if (count <= 0) return;
+        console.log("Preloading images %d", count, { "this.images.length": this.images.length, "this.state.currentIndex": this.state.currentIndex, "this.countOfImagesPreloading": this.countOfImagesPreloading, "this.currentMaxNumberOfImagesToPreload": this.currentMaxNumberOfImagesToPreload })
+
+        this.countOfImagesPreloading += count;
 
         if (typeof window !== "undefined") {
             for (var i = 0; i < count; i++) {
-                let img = new Image();
-                img.src = getImageUrlToLoad();
-                img.onload = () => {
-                    this.pushToImagesList(img.src);
-                }
+                preloadImage(this.useFallbackUrl).then(url => {
+                    if (url != null) {
+                        this.pushToImagesList(url);
+                        this.currentMaxNumberOfImagesToPreload = Math.min(maxImagesToPreloadAtOnce, this.currentMaxNumberOfImagesToPreload + 1);
+                        // If we've succeeded then try to preload more images. This function will early return if its doing too much work!
+                        this.preloadImages();
+                    }
+                }).finally(() => {
+                    this.countOfImagesPreloading--;
+                })
             }
         }
     }
 
     render() {
         return (
-            <div class="wrapperDiv">
-                {/* {this.state.showingLoader ? <Loader /> : null} */}
-                {/* <Loader /> */}
-                <img id="photo" src={this.images[this.state.currentIndex] || "https://source.unsplash.com/collection/139386/500x500"} alt="" onload={this.endShowingLoader} onerror={this.goToNextPhoto} onClick={this.goToNextPhoto}> 
-                
-                </img>
-                <br />
-                <button class="prev" onClick={this.goToPrevPhoto}>&#10094;</button>
-                <button class="next" onClick={this.goToNextPhoto}>&#10095;</button>
-                <br />
+            // https://grid.layoutit.com/?id=bCPxgJi
+            <div class="PageGrid">
+                <div class="PhotoWrapper">
+                    <div class="PhotoFrame">
+                        <img class={this.state.currentIndex === -1 ? "PhotoDisplay PhotoPreload" : "PhotoDisplay"} src={this.state.currentImage} alt="" onerror={this.handleImageError} onClick={this.goToNextPhoto} crossorigin="anonymous">
+                        </img>
+                        {this.state.showingLoader ? <Loader /> : null}
+                    </div>
+                </div>
+
+                <div class="PhotoButtons">
+                    <button class="prev" onClick={this.goToPrevPhoto}>&#10094;</button>
+                    <button class="next" onClick={this.goToNextPhoto}>&#10095;</button>
+                </div>
             </div>
         );
     }
