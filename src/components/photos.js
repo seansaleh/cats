@@ -13,8 +13,8 @@ const imagesListStorageKey = 'image-urls';
 const imageCacheName = "image-cache";
 const maxImagesToPreloadAtOnce = 6;
 const timeToShowLoaderMs = 2790;
-// const starterImageUrl = "";
-const starterImageUrl = "https://source.unsplash.com/collection/139386/500x500";
+const starterImageUrl = "";
+// const starterImageUrl = "https://source.unsplash.com/collection/139386/500x500";
 
 // TODO: if you want to try to do move MVC https://github.dev/developit/preact-todomvc/tree/master/src/app
 
@@ -83,6 +83,7 @@ export default class Photos extends Component {
             currentImage: starterImageUrl,
         }
         this.currentIndex = getCurrentIndexFromStorage();
+        // console.log("In Constructor", { "this.currentIndex": this.currentIndex, "this.images": this.images, "this.state": this.state })
 
         if (this.currentIndex > -1) {
             this.state.currentImage = this.images[this.currentIndex];
@@ -259,42 +260,43 @@ export default class Photos extends Component {
     preloadImages() {
         // Only preload images when running in the browser
         if (typeof window !== "undefined") {
-        let count = this.calculateNumberOfImagesToPreloadAtOnce();
-        if (count <= 0) return;
-        console.log("Preloading images %d", count, { "this.images.length": this.images.length, "this.currentIndex": this.currentIndex, "this.countOfImagesPreloading": this.countOfImagesPreloading, "this.currentMaxNumberOfImagesToPreload": this.currentMaxNumberOfImagesToPreload })
+            let count = this.calculateNumberOfImagesToPreloadAtOnce();
+            if (count <= 0) return;
+            // console.log("Preloading images %d", count, { "this.images.length": this.images.length, "this.currentIndex": this.currentIndex, "this.countOfImagesPreloading": this.countOfImagesPreloading, "this.currentMaxNumberOfImagesToPreload": this.currentMaxNumberOfImagesToPreload })
 
-        this.countOfImagesPreloading += count;
+            this.countOfImagesPreloading += count;
 
-        if (typeof window !== "undefined") {
-            for (var i = 0; i < count; i++) {
-                preloadImage(this.useFallbackUrl).then(url => {
-                    if (url != null) {
-                        this.pushToImagesList(url);
-                        this.currentMaxNumberOfImagesToPreload = Math.min(maxImagesToPreloadAtOnce, this.currentMaxNumberOfImagesToPreload + 1);
-                        // If we've succeeded then try to preload more images. This function will early return if its doing too much work!
-                        this.preloadImages();
-                    }
-                }).finally(() => {
-                    this.countOfImagesPreloading--;
-                })
+            if (typeof window !== "undefined") {
+                for (var i = 0; i < count; i++) {
+                    preloadImage(this.useFallbackUrl).then(url => {
+                        if (url != null) {
+                            this.pushToImagesList(url);
+                            this.currentMaxNumberOfImagesToPreload = Math.min(maxImagesToPreloadAtOnce, this.currentMaxNumberOfImagesToPreload + 1);
+                            // If we've succeeded then try to preload more images. This function will early return if its doing too much work!
+                            this.preloadImages();
+                        }
+                    }).finally(() => {
+                        this.countOfImagesPreloading--;
+                    })
+                }
             }
         }
     }
-    }
 
     render() {
+        console.log("In Render", { "this.currentIndex": this.currentIndex, "this.images": this.images, "this.state": this.state })
         return (
             // https://grid.layoutit.com/?id=bCPxgJi
             <div class="PageGrid">
                 <div class="PhotoWrapper">
                     <div class="PhotoFrame">
-                    <img class="PhotoDisplay" src={this.state.currentImage} alt="" onClick={this.goToNextPhoto} crossorigin="anonymous">
-                    {/* <img class="{myClass}" src={this.state.currentImage} alt="" onClick={this.goToNextPhoto} crossorigin="anonymous"> */}
-                    {/* https://github.com/preactjs/preact/issues/103 */}
-                    {/* <img class={{ PhotoDisplay:true, PhotoPreload:this.state.currentImage == "" }} src={this.state.currentImage} alt="" onClick={this.goToNextPhoto} crossorigin="anonymous"> */}
+                        {/* <img class="PhotoDisplay" src={this.state.currentImage} alt="" onClick={this.goToNextPhoto} crossorigin="anonymous"> */}
+                        {/* <img class="{myClass}" src={this.state.currentImage} alt="" onClick={this.goToNextPhoto} crossorigin="anonymous"> */}
+                        {/* BUG: with pre-rendering enabled the wrong class and image is displayed. The Class will only get updated by changing the vdom element, so going back to picture -1*/}
+                        <img class={this.state.currentImage == "" ? "PhotoDisplay PhotoPreload" : "PhotoDisplay"} src={this.state.currentImage} alt="" onClick={this.goToNextPhoto} crossorigin="anonymous">
                         </img>
                         {/* TODO: Get the loader to sit relative to the PhotoDisplay */}
-                    <div class="PhotoSpacer" />
+                        <div class="PhotoSpacer" />
                         {this.state.showingLoader ? <Loader /> : null}
                     </div>
                 </div>
@@ -305,11 +307,11 @@ export default class Photos extends Component {
                         <input type="image" class="ImgSvgButton" role="button" onClick={this.goToPrevPhoto} src={rightArrow}></input>
                     </div> */}
                     <button class="PhotoButton ImgSvgButton" onClick={this.goToPrevPhoto}>
-                            <img class= "SvgButton" src={rightArrow} style="scale: 90%;"></img>
-                        </button>
-                        <button class="PhotoButton ImgSvgButton" onClick={this.goToNextPhoto}>
-                            <img class= "SvgButton" src={leftArrow}></img>
-                        </button>
+                        <img class="SvgButton" src={rightArrow} style="scale: 90%;"></img>
+                    </button>
+                    <button class="PhotoButton ImgSvgButton" onClick={this.goToNextPhoto}>
+                        <img class="SvgButton" src={leftArrow}></img>
+                    </button>
                     {/* <button class="next PhotoButton" onClick={this.goToNextPhoto}>
                         <img src={leftArrow}></img>
                     </button> */}
