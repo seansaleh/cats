@@ -13,6 +13,8 @@ const imagesListStorageKey = 'image-urls';
 const imageCacheName = "image-cache";
 const maxImagesToPreloadAtOnce = 6;
 const timeToShowLoaderMs = 2790;
+// const starterImageUrl = "";
+const starterImageUrl = "https://source.unsplash.com/collection/139386/500x500";
 
 // TODO: if you want to try to do move MVC https://github.dev/developit/preact-todomvc/tree/master/src/app
 
@@ -78,7 +80,7 @@ export default class Photos extends Component {
         this.images = getImagesListFromStorage();
         this.state = {
             showingLoader: false,
-            currentImage: "",
+            currentImage: starterImageUrl,
         }
         this.currentIndex = getCurrentIndexFromStorage();
 
@@ -199,7 +201,7 @@ export default class Photos extends Component {
         this.currentIndex = newPointer;
         this.setState((state) => {
             if (newPointer === -1) {
-                state.currentImage = ""
+                state.currentImage = starterImageUrl;
             } else {
                 state.currentImage = this.images[newPointer];
             }
@@ -255,6 +257,8 @@ export default class Photos extends Component {
     }
 
     preloadImages() {
+        // Only preload images when running in the browser
+        if (typeof window !== "undefined") {
         let count = this.calculateNumberOfImagesToPreloadAtOnce();
         if (count <= 0) return;
         console.log("Preloading images %d", count, { "this.images.length": this.images.length, "this.currentIndex": this.currentIndex, "this.countOfImagesPreloading": this.countOfImagesPreloading, "this.currentMaxNumberOfImagesToPreload": this.currentMaxNumberOfImagesToPreload })
@@ -276,6 +280,7 @@ export default class Photos extends Component {
             }
         }
     }
+    }
 
     render() {
         return (
@@ -283,10 +288,13 @@ export default class Photos extends Component {
             <div class="PageGrid">
                 <div class="PhotoWrapper">
                     <div class="PhotoFrame">
-                        <img class={this.currentIndex === -1 ? "PhotoDisplay PhotoPreload" : "PhotoDisplay"} src={this.state.currentImage} alt="" onerror={this.handleImageError} onClick={this.goToNextPhoto} crossorigin="anonymous">
+                    <img class="PhotoDisplay" src={this.state.currentImage} alt="" onClick={this.goToNextPhoto} crossorigin="anonymous">
+                    {/* <img class="{myClass}" src={this.state.currentImage} alt="" onClick={this.goToNextPhoto} crossorigin="anonymous"> */}
+                    {/* https://github.com/preactjs/preact/issues/103 */}
+                    {/* <img class={{ PhotoDisplay:true, PhotoPreload:this.state.currentImage == "" }} src={this.state.currentImage} alt="" onClick={this.goToNextPhoto} crossorigin="anonymous"> */}
                         </img>
                         {/* TODO: Get the loader to sit relative to the PhotoDisplay */}
-                        <div class="PhotoSpacer"/>
+                    <div class="PhotoSpacer" />
                         {this.state.showingLoader ? <Loader /> : null}
                     </div>
                 </div>
