@@ -72,13 +72,13 @@ export default class Photos extends Component {
         super()
         this.images = getImagesListFromStorage();
         this.state = {
-            currentIndex: getCurrentIndexFromStorage(),
             showingLoader: false,
             currentImage: "",
         }
+        this.currentIndex= getCurrentIndexFromStorage();
 
-        if (this.state.currentIndex > -1) {
-            this.state.currentImage = this.images[this.state.currentIndex];
+        if (this.currentIndex > -1) {
+            this.state.currentImage = this.images[this.currentIndex];
         }
 
         this.countOfImagesPreloading = 0;
@@ -119,7 +119,7 @@ export default class Photos extends Component {
                 if (currentImageIndexInNewList > -1) {
                     this.updateCurrentPhoto(currentImageIndexInNewList);
                 }
-                else if (this.state.currentIndex >= this.images.length) {
+                else if (this.currentIndex >= this.images.length) {
                     console.warn("We were browsing past the end of the newly cleaned up stack of images, thus we need to reset our index.");
                     this.updateCurrentPhoto(this.images.length - 1);
                 }
@@ -128,16 +128,15 @@ export default class Photos extends Component {
     }
 
     componentDidUpdate() {
-        setCurrentIndexToStorage(this.state.currentIndex);
+        setCurrentIndexToStorage(this.currentIndex);
     }
     componentWillUnmount() {
         this.endShowingLoader();
     }
 
     goToPrevPhoto() {
-        const { currentIndex } = this.state;
-        const newPointer = currentIndex === -1 ? -1 : currentIndex - 1;
-        if (currentIndex === -1) {
+        const newPointer = this.currentIndex === -1 ? -1 : this.currentIndex - 1;
+        if (this.currentIndex === -1) {
             // As an easter egg show the loader when you try to go back.
             // No callback means that it will just do one loop!
             this.showLoader();
@@ -152,7 +151,6 @@ export default class Photos extends Component {
     // Will call itself and wait with the loader for new images
     // If you call lots of times while waiting for loading it will look for a new photo and try to get it!
     goToNextPhoto() {
-        const { currentIndex } = this.state;
         var newPointer;
         // Run this with our old state to properly cleanup the list and our position in it
         this.reconcileCachedImagesWithList();
@@ -161,23 +159,22 @@ export default class Photos extends Component {
         // Preload images here will have the "old" pointer
         this.preloadImages();
 
-        if (currentIndex === this.images.length - 1) {
+        if (this.currentIndex === this.images.length - 1) {
             // Show loader and after a timeout try again to go to the next photo
             this.showLoader(this.goToNextPhoto);
-            newPointer = currentIndex;
+            newPointer = this.currentIndex;
         } else {
             this.endShowingLoader();
-            newPointer = currentIndex + 1;
+            newPointer = this.currentIndex + 1;
         }
 
         this.updateCurrentPhoto(newPointer);
-
     }
 
     updateCurrentPhoto(newPointer) {
+        this.currentIndex = newPointer;
         this.setState((state) => {
-            state.currentIndex = newPointer;
-            if (state.currentIndex === -1) {
+            if (this.currentIndex === -1) {
                 state.currentImage = ""
             } else {
                 state.currentImage = this.images[newPointer];
@@ -222,14 +219,14 @@ export default class Photos extends Component {
     }
 
     calculateNumberOfImagesToPreloadAtOnce() {
-        var imagesLeftInQueue = this.images.length - (this.state.currentIndex + 1);
+        var imagesLeftInQueue = this.images.length - (this.currentIndex + 1);
         return Math.max(0, this.currentMaxNumberOfImagesToPreload - imagesLeftInQueue - this.countOfImagesPreloading);
     }
 
     preloadImages() {
         let count = this.calculateNumberOfImagesToPreloadAtOnce();
         if (count <= 0) return;
-        console.log("Preloading images %d", count, { "this.images.length": this.images.length, "this.state.currentIndex": this.state.currentIndex, "this.countOfImagesPreloading": this.countOfImagesPreloading, "this.currentMaxNumberOfImagesToPreload": this.currentMaxNumberOfImagesToPreload })
+        console.log("Preloading images %d", count, { "this.images.length": this.images.length, "this.currentIndex": this.currentIndex, "this.countOfImagesPreloading": this.countOfImagesPreloading, "this.currentMaxNumberOfImagesToPreload": this.currentMaxNumberOfImagesToPreload })
 
         this.countOfImagesPreloading += count;
 
@@ -255,7 +252,7 @@ export default class Photos extends Component {
             <div class="PageGrid">
                 <div class="PhotoWrapper">
                     <div class="PhotoFrame">
-                        <img class={this.state.currentIndex === -1 ? "PhotoDisplay PhotoPreload" : "PhotoDisplay"} src={this.state.currentImage} alt="" onerror={this.handleImageError} onClick={this.goToNextPhoto} crossorigin="anonymous">
+                        <img class={this.currentIndex === -1 ? "PhotoDisplay PhotoPreload" : "PhotoDisplay"} src={this.state.currentImage} alt="" onerror={this.handleImageError} onClick={this.goToNextPhoto} crossorigin="anonymous">
                         </img>
                         {this.state.showingLoader ? <Loader /> : null}
                     </div>
