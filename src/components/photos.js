@@ -36,7 +36,6 @@ function getCurrentIndexFromStorage() {
     console.log("get index: ", result)
     return result;
 }
-
 function setCurrentIndexToStorage(index) {
     store(curentIndexStorageKey, index);
 }
@@ -115,7 +114,12 @@ export default class Photos extends Component {
                 this.images = itemsStillCached;
                 setImagesListToStorage(this.images);
 
-                if (this.state.currentIndex >= this.images.length) {
+                let currentImageIndexInNewList = this.images.indexOf(this.currentImage);
+
+                if (currentImageIndexInNewList > -1) {
+                    this.updateCurrentPhoto(currentImageIndexInNewList);
+                }
+                else if (this.state.currentIndex >= this.images.length) {
                     console.warn("We were browsing past the end of the newly cleaned up stack of images, thus we need to reset our index.");
                     this.updateCurrentPhoto(this.images.length - 1);
                 }
@@ -150,10 +154,11 @@ export default class Photos extends Component {
     goToNextPhoto() {
         const { currentIndex } = this.state;
         var newPointer;
-
-        // These commands are both safe to run as much as you want
+        // Run this with our old state to properly cleanup the list and our position in it
         this.reconcileCachedImagesWithList();
+
         // This command won't kick off more work unless there's space in the queue
+        // Preload images here will have the "old" pointer
         this.preloadImages();
 
         if (currentIndex === this.images.length - 1) {
@@ -163,8 +168,10 @@ export default class Photos extends Component {
         } else {
             this.endShowingLoader();
             newPointer = currentIndex + 1;
-            this.updateCurrentPhoto(newPointer);
         }
+
+        this.updateCurrentPhoto(newPointer);
+
     }
 
     updateCurrentPhoto(newPointer) {
