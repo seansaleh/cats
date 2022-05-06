@@ -46,6 +46,7 @@ body {
     max-height: 95%;
     max-width: 95%;
     border-radius: 8px;
+    filter: drop-shadow(2px 2px 8px rgba(0,0,0,.2));
 }
 
 /* https://stackoverflow.com/questions/980855/inputting-a-default-image-in-case-the-src-attribute-of-an-html-img-is-not-vali/980948#980948 */
@@ -57,6 +58,7 @@ body {
   aspect-ratio: 1;
   background-size: contain;
   background-repeat: no-repeat;
+  font-size: 10000px;
 }
 
 svg {
