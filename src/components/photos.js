@@ -75,7 +75,7 @@ export default class Photos extends Component {
             showingLoader: false,
             currentImage: "",
         }
-        this.currentIndex= getCurrentIndexFromStorage();
+        this.currentIndex = getCurrentIndexFromStorage();
 
         if (this.currentIndex > -1) {
             this.state.currentImage = this.images[this.currentIndex];
@@ -87,6 +87,7 @@ export default class Photos extends Component {
 
         this.reconcileCachedImagesWithList = this.reconcileCachedImagesWithList.bind(this);
         this.preloadImages = this.preloadImages.bind(this);
+        this.onKeyDown = this.onKeyDown.bind(this);
         this.goToPrevPhoto = this.goToPrevPhoto.bind(this);
         this.goToNextPhoto = this.goToNextPhoto.bind(this);
         this.pushToImagesList = this.pushToImagesList.bind(this);
@@ -130,8 +131,26 @@ export default class Photos extends Component {
     componentDidUpdate() {
         setCurrentIndexToStorage(this.currentIndex);
     }
+    componentDidMount() {
+        addEventListener('keydown', this.onKeyDown);
+    }
     componentWillUnmount() {
         this.endShowingLoader();
+        removeEventListener('keydown', this.onKeyDown);
+    }
+
+    onKeyDown(event) {
+        // Left Arrow
+        if (event.keyCode === 37) {
+            this.goToPrevPhoto();
+        }
+        // Right Arrow
+        if (event.keyCode === 39) {
+            this.goToNextPhoto();
+        }
+        if (event.key === "s") {
+            this.showLoader();
+        }
     }
 
     goToPrevPhoto() {
@@ -188,6 +207,7 @@ export default class Photos extends Component {
             state.showingLoader = true;
             return state;
         });
+        let loaderStartedCurrentImage = this.state.currentImage;
 
         if (!this.timeout) {
             console.log("Showing Loader & Setting timeout to retry next photo");
@@ -195,8 +215,13 @@ export default class Photos extends Component {
                 // After x time stop showing the loader.
                 // If the callback still wants the loader we can call showLoader again and no state will change because react.
                 this.endShowingLoader();
+                if (this.state.currentImage == loaderStartedCurrentImage) {
 
-                cb ? cb() : null;
+                    cb ? cb() : null;
+                }
+                else {
+                    console.log("Not running loader callback because state has changed")
+                }
             }.bind(this), timeToShowLoaderMs);
         }
     }
@@ -219,6 +244,7 @@ export default class Photos extends Component {
     }
 
     calculateNumberOfImagesToPreloadAtOnce() {
+        //TODO: Fix this logic to decouple number of requests at once vs number of images to have preloaded
         var imagesLeftInQueue = this.images.length - (this.currentIndex + 1);
         return Math.max(0, this.currentMaxNumberOfImagesToPreload - imagesLeftInQueue - this.countOfImagesPreloading);
     }
