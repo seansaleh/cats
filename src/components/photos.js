@@ -34,7 +34,10 @@ function setImagesListToStorage(imagesList) {
 }
 
 function getCurrentIndexFromStorage() {
-    var result = parseInt(store(curentIndexStorageKey)) || -1;
+    var result = parseInt(store(curentIndexStorageKey));
+    if (!Number.isInteger(result)) {
+        result = -1;
+    }
     console.log("get index: ", result)
     return result;
 }
@@ -195,7 +198,7 @@ export default class Photos extends Component {
     updateCurrentPhoto(newPointer) {
         this.currentIndex = newPointer;
         this.setState((state) => {
-            if (this.currentIndex === -1) {
+            if (newPointer === -1) {
                 state.currentImage = ""
             } else {
                 state.currentImage = this.images[newPointer];
