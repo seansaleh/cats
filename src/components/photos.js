@@ -2,6 +2,8 @@ import '../style';
 import { store } from './util';
 import Loader from './loader';
 import { Component } from 'preact';
+import leftArrow from './leftArrow.svg'
+import rightArrow from './rightArrow.svg'
 // const url = "https://picsum.photos/400/601?";
 const url = "https://source.unsplash.com/collection/139386?"
 // const url = "https://thecatapi.com/api/images/get?format=src";
@@ -280,13 +282,26 @@ export default class Photos extends Component {
                     <div class="PhotoFrame">
                         <img class={this.currentIndex === -1 ? "PhotoDisplay PhotoPreload" : "PhotoDisplay"} src={this.state.currentImage} alt="" onerror={this.handleImageError} onClick={this.goToNextPhoto} crossorigin="anonymous">
                         </img>
+                        {/* TODO: Get the loader to sit relative to the PhotoDisplay */}
+                        <div class="PhotoSpacer"/>
                         {this.state.showingLoader ? <Loader /> : null}
                     </div>
                 </div>
 
                 <div class="PhotoButtons">
-                    <button class="prev" onClick={this.goToPrevPhoto}>&#10094;</button>
-                    <button class="next" onClick={this.goToNextPhoto}>&#10095;</button>
+                    {/* <button class="prev PhotoButton" onClick={this.goToPrevPhoto}>&#10094;</button> */}
+                    {/* <div class = "flip PhotoButton">
+                        <input type="image" class="ImgSvgButton" role="button" onClick={this.goToPrevPhoto} src={rightArrow}></input>
+                    </div> */}
+                    <button class="PhotoButton ImgSvgButton" onClick={this.goToPrevPhoto}>
+                            <img class= "SvgButton" src={rightArrow} style="scale: 90%;"></img>
+                        </button>
+                        <button class="PhotoButton ImgSvgButton" onClick={this.goToNextPhoto}>
+                            <img class= "SvgButton" src={leftArrow}></img>
+                        </button>
+                    {/* <button class="next PhotoButton" onClick={this.goToNextPhoto}>
+                        <img src={leftArrow}></img>
+                    </button> */}
                 </div>
             </div>
         );

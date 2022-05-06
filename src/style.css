@@ -6,6 +6,7 @@ body {
     font-size: 0;
     height: 100%;
     width: 100%;
+    overflow: hidden;
 }
 
 .FullDiv {
@@ -14,7 +15,7 @@ body {
 }
 
 .PageGrid {  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr;
   grid-template-rows: 1fr 1.5fr 0.5fr;
   gap: 0px 0px;
   grid-auto-flow: column;
@@ -25,15 +26,88 @@ body {
 .PhotoWrapper { grid-area: 1 / 1 / 4 / 4; }
 
 .PhotoButtons { 
-  grid-area: 3 / 2 / 4 / 3; 
+  grid-area: 3 / 1 / 4 / 1; 
   z-index: 1;
+  min-width: 0;
+  min-height: 0;
+  /* margin: 10px;
+  padding: 10px; */
+  align-self: end;
+  height: 100%;
+  display: flex;
+  justify-content: center;
 }
 
+.PhotoButton {
+  align-self: flex-end;
+  max-height: 95%;
+  max-width: 95%;
+  /* background: #fff;
+border-radius: 15px;
+box-shadow: 2px 2px 8px rgba(0,0,0,.15);
+padding: 5px; */
+  margin: 20px;
+}
+
+.SvgButton {
+  /* Generate color with https://codepen.io/sosuke/pen/Pjoqqp */
+  filter: /*invert(26%) sepia(65%) saturate(3667%) hue-rotate(254deg) brightness(92%) contrast(101%)*/
+          drop-shadow(1px 1px 1px rgba(0,0,0,.4));
+  max-width: 100%;
+  max-height: 100%;
+  transform: scaleX(-1);
+}
+
+.ImgSvgButton {
+  align-items: center;
+  appearance: none;
+  background-color: #f3efd5;
+  border-radius: 4px;
+  border-width: 0;
+  box-shadow: rgba(45, 35, 66, 0.4) 0 2px 4px,rgba(45, 35, 66, 0.3) 0 7px 13px -3px,#D6D6E7 0 -3px 0 inset;
+  box-sizing: border-box;
+  color: #36395A;
+  cursor: pointer;
+  display: inline-flex;
+  font-family: "JetBrains Mono",monospace;
+  height: 60px;
+  width: 130px;
+  padding:4px;
+  justify-content: center;
+  line-height: 1;
+  list-style: none;
+  overflow: hidden;
+  position: relative;
+  text-align: left;
+  text-decoration: none;
+  transition: box-shadow .15s,transform .15s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  white-space: nowrap;
+  will-change: box-shadow,transform;
+  font-size: 18px;
+  background: linear-gradient(#e7dfdd, #f3efd5);
+}
+
+.ImgSvgButton:focus {
+  box-shadow: #D6D6E7 0 0 0 1.5px inset, rgba(45, 35, 66, 0.4) 0 2px 4px, rgba(45, 35, 66, 0.3) 0 7px 13px -3px, #D6D6E7 0 -3px 0 inset;
+}
+
+.ImgSvgButton:hover {
+  box-shadow: rgba(45, 35, 66, 0.4) 0 4px 8px, rgba(45, 35, 66, 0.3) 0 7px 13px -3px, #D6D6E7 0 -3px 0 inset;
+  transform: translateY(-2px);
+}
+
+.ImgSvgButton:active {
+  box-shadow: #D6D6E7 0 3px 7px inset;
+  transform: translateY(2px);
+}
 
 .PhotoFrame {
     position: fixed;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     width: 100%;
@@ -46,7 +120,13 @@ body {
     max-height: 95%;
     max-width: 95%;
     border-radius: 8px;
-    filter: drop-shadow(2px 2px 8px rgba(0,0,0,.2));
+    filter: drop-shadow(4px 4px 12px rgba(0,0,0,.5));
+    margin: 5%;
+}
+
+.PhotoSpacer {
+  height: 20%;
+  max-height: 80px;
 }
 
 /* https://stackoverflow.com/questions/980855/inputting-a-default-image-in-case-the-src-attribute-of-an-html-img-is-not-vali/980948#980948 */
