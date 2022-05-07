@@ -4,7 +4,16 @@ import { CacheFirst } from 'workbox-strategies';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
 registerRoute(
-    ({ request }) => request.destination === 'image',
+    (input) => {
+        if(input.sameOrigin) {
+            // Do not cache our own website. Let our precaching handle that!
+            return false;
+        }
+        if (input.request.destination === 'image') {
+            return true;
+        }
+        return false;
+    },
     new CacheFirst({
         cacheName: 'image-cache',
         plugins: [
@@ -16,4 +25,6 @@ registerRoute(
 );
 
 setupRouting();
-setupPrecaching(getFiles());
+const urlsToCache = getFiles();
+urlsToCache.push({ url: '/favicon.ico', revision: null });
+setupPrecaching(urlsToCache);
