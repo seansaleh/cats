@@ -57,18 +57,23 @@ padding: 5px; */
 }
 
 .SvgButton {
+  /* color: #241563 */
   /* Generate color with https://codepen.io/sosuke/pen/Pjoqqp */
-  filter: /*invert(26%) sepia(65%) saturate(3667%) hue-rotate(254deg) brightness(92%) contrast(101%)*/
+  filter: invert(12%) sepia(20%) saturate(6875%) hue-rotate(238deg) brightness(105%) contrast(109%)
           drop-shadow(1px 1px 1px rgba(0,0,0,.4));
   max-width: 100%;
   max-height: 100%;
   transform: scaleX(-1);
 }
 
+/* Foreground color 241563
+Background Color f4e9db
+Complementary color d14c3c */
+
 .ImgSvgButton {
   align-items: center;
   appearance: none;
-  background-color: #f3efd5;
+  background-color: #f4e9db; 
   border-radius: 4px;
   border-width: 0;
   box-shadow: rgba(45, 35, 66, 0.4) 0 2px 4px,rgba(45, 35, 66, 0.3) 0 7px 13px -3px,#D6D6E7 0 -3px 0 inset;
@@ -94,7 +99,7 @@ padding: 5px; */
   white-space: nowrap;
   will-change: box-shadow,transform;
   font-size: 18px;
-  background: linear-gradient(#e7dfdd, #f3efd5);
+  /* background: linear-gradient(#e7dfdd, #f3efd5); */
 }
 
 .ImgSvgButton:focus {
