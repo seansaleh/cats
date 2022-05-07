@@ -14,7 +14,7 @@ const imageCacheName = "image-cache";
 const maxImagesToPreloadAtOnce = 6;
 const timeToShowLoaderMs = 2790;
 const starterImageUrl = "";
-// const starterImageUrl = "https://source.unsplash.com/collection/139386/500x500";
+const backupImageUrl = "https://source.unsplash.com/collection/139386/500x500";
 
 // TODO: if you want to try to do move MVC https://github.dev/developit/preact-todomvc/tree/master/src/app
 
@@ -40,7 +40,7 @@ function getCurrentIndexFromStorage() {
     if (!Number.isInteger(result)) {
         result = -1;
     }
-    console.log("get index: ", result)
+    // console.log("get index: ", result)
     return result;
 }
 function setCurrentIndexToStorage(index) {
@@ -64,9 +64,11 @@ async function preloadImage(useFallbackUrl, specificUrl) {
         var myResponse = new Response(result.body, {
             "status": 200,
             "statusText": "OK",
+            headers: {
             "cache-control": "public, max-age=315360000",
-            "content-length": result.headers["content-length"],
-            "content-type": result.headers["content-type"],
+                "content-length": result.headers.get("content-length"),
+                "content-type": result.headers.get("content-type"),
+            },
         });
         await cache.put(result.url, myResponse);
 
@@ -76,14 +78,14 @@ async function preloadImage(useFallbackUrl, specificUrl) {
 
 export default class Photos extends Component {
     constructor() {
+        // Note, with Preact prerendering we can't do anything dynamically in the constructor, we must do it on component load instead
         super()
-        this.images = getImagesListFromStorage();
+        this.images = [];
         this.state = {
             showingLoader: false,
             currentImage: starterImageUrl,
         }
-        this.currentIndex = getCurrentIndexFromStorage();
-        // console.log("In Constructor", { "this.currentIndex": this.currentIndex, "this.images": this.images, "this.state": this.state })
+        this.currentIndex = -1;
 
         if (this.currentIndex > -1) {
             this.state.currentImage = this.images[this.currentIndex];
@@ -104,7 +106,6 @@ export default class Photos extends Component {
         this.endShowingLoader = this.endShowingLoader.bind(this);
         this.calculateNumberOfImagesToPreloadAtOnce = this.calculateNumberOfImagesToPreloadAtOnce.bind(this);
 
-        this.preloadImages();
     }
     // https://stackoverflow.com/questions/53368714/reactjs-change-current-image-being-displayed-using-prev-and-next-buttons
 
@@ -141,6 +142,10 @@ export default class Photos extends Component {
     }
     componentDidMount() {
         addEventListener('keydown', this.onKeyDown);
+        this.images = getImagesListFromStorage();
+        this.currentIndex = getCurrentIndexFromStorage();
+        this.preloadImages();
+        this.updateCurrentPhoto(this.currentIndex);
     }
     componentWillUnmount() {
         this.endShowingLoader();
@@ -284,37 +289,36 @@ export default class Photos extends Component {
     }
 
     render() {
-        // console.log("In Render", { "this.currentIndex": this.currentIndex, "this.images": this.images, "this.state": this.state })
+        let photoDiv;
+        // Lesson learned, there is some sort of internal state that gets pre-rendered and saved, and only changes that are different from that original state get actually made
+        // So we only create this img through js client side, not when pre-rendered
+        if (typeof window === "undefined") {
+            photoDiv = null
+        } else {
+            photoDiv = <img class={this.state.currentImage == "" ? "PhotoDisplay PhotoPreload" : "PhotoDisplay"} src={this.state.currentImage} alt="" onClick={this.goToNextPhoto} crossorigin="anonymous"></img>
+        }
         return (
             // https://grid.layoutit.com/?id=bCPxgJi
             <div class="PageGrid">
                 <div class="PhotoWrapper">
                     <div class="PhotoFrame">
-                        {/* <img class="PhotoDisplay" src={this.state.currentImage} alt="" onClick={this.goToNextPhoto} crossorigin="anonymous"> */}
-                        {/* <img class="{myClass}" src={this.state.currentImage} alt="" onClick={this.goToNextPhoto} crossorigin="anonymous"> */}
-                        {/* BUG: with pre-rendering enabled the wrong class and image is displayed. The Class will only get updated by changing the vdom element, so going back to picture -1*/}
-                        <img class={this.state.currentImage == "" ? "PhotoDisplay PhotoPreload" : "PhotoDisplay"} src={this.state.currentImage} alt="" onClick={this.goToNextPhoto} crossorigin="anonymous">
-                        </img>
-                        {/* TODO: Get the loader to sit relative to the PhotoDisplay */}
+                        {photoDiv}
+                        <noscript>
+                            <img class="PhotoDisplay" src={backupImageUrl} alt=""></img>
+                        </noscript>
                         <div class="PhotoSpacer" />
+                        {/* TODO: Get the loader to sit relative to the PhotoDisplay */}
                         {this.state.showingLoader ? <Loader /> : null}
                     </div>
                 </div>
 
                 <div class="PhotoButtons">
-                    {/* <button class="prev PhotoButton" onClick={this.goToPrevPhoto}>&#10094;</button> */}
-                    {/* <div class = "flip PhotoButton">
-                        <input type="image" class="ImgSvgButton" role="button" onClick={this.goToPrevPhoto} src={rightArrow}></input>
-                    </div> */}
                     <button class="PhotoButton ImgSvgButton" onClick={this.goToPrevPhoto}>
                         <img class="SvgButton" src={rightArrow} style="scale: 90%;"></img>
                     </button>
                     <button class="PhotoButton ImgSvgButton" onClick={this.goToNextPhoto}>
                         <img class="SvgButton" src={leftArrow}></img>
                     </button>
-                    {/* <button class="next PhotoButton" onClick={this.goToNextPhoto}>
-                        <img src={leftArrow}></img>
-                    </button> */}
                 </div>
             </div>
         );
