@@ -38,7 +38,7 @@ function setImagesListToStorage(imagesList) {
 function getCurrentIndexFromStorage() {
     var result = parseInt(store(curentIndexStorageKey));
     if (!Number.isInteger(result)) {
-        result = -1;
+        result = 0;
     }
     // console.log("get index: ", result)
     return result;
@@ -65,7 +65,7 @@ async function preloadImage(useFallbackUrl, specificUrl) {
             "status": 200,
             "statusText": "OK",
             headers: {
-            "cache-control": "public, max-age=315360000",
+                "cache-control": "public, max-age=315360000",
                 "content-length": result.headers.get("content-length"),
                 "content-type": result.headers.get("content-type"),
             },
@@ -85,11 +85,7 @@ export default class Photos extends Component {
             showingLoader: false,
             currentImage: starterImageUrl,
         }
-        this.currentIndex = -1;
-
-        if (this.currentIndex > -1) {
-            this.state.currentImage = this.images[this.currentIndex];
-        }
+        this.currentIndex = 0;
 
         this.countOfImagesPreloading = 0;
         this.useFallbackUrl = false;
@@ -103,9 +99,12 @@ export default class Photos extends Component {
         this.pushToImagesList = this.pushToImagesList.bind(this);
         this.updatePointer = this.updateCurrentPhoto.bind(this);
         this.showLoader = this.showLoader.bind(this);
+        this.loadInitialPhotoIfNoImagesLoaded = this.loadInitialPhotoIfNoImagesLoaded.bind(this);
+        this.updateCurrentPhoto = this.updateCurrentPhoto.bind(this);
         this.endShowingLoader = this.endShowingLoader.bind(this);
         this.calculateNumberOfImagesToPreloadAtOnce = this.calculateNumberOfImagesToPreloadAtOnce.bind(this);
 
+        this.preloadImages();
     }
     // https://stackoverflow.com/questions/53368714/reactjs-change-current-image-being-displayed-using-prev-and-next-buttons
 
@@ -167,8 +166,8 @@ export default class Photos extends Component {
     }
 
     goToPrevPhoto() {
-        const newPointer = this.currentIndex === -1 ? -1 : this.currentIndex - 1;
-        if (this.currentIndex === -1) {
+        const newPointer = this.currentIndex === 0 ? 0 : this.currentIndex - 1;
+        if (this.currentIndex === 0) {
             // As an easter egg show the loader when you try to go back.
             // No callback means that it will just do one loop!
             this.showLoader();
@@ -203,16 +202,34 @@ export default class Photos extends Component {
         this.updateCurrentPhoto(newPointer);
     }
 
+    loadInitialPhotoIfNoImagesLoaded() {
+        if (this.images.length == 0) {
+            // Show loader and try again
+            this.showLoader(this.loadInitialPhotoIfNoImagesLoaded);
+            // Also make sure we are trying to preload!
+            this.preloadImages();
+        } 
+        // Otherwise lets make sure to update the state correctly
+        // For example when the loader calls back we need to do this
+        else {
+            this.setState((state) => {
+                state.currentImage = this.images[this.currentIndex];
+                return state;
+            });
+        }
+    }
+
     updateCurrentPhoto(newPointer) {
         this.currentIndex = newPointer;
         this.setState((state) => {
-            if (newPointer === -1) {
+            if (this.images.length == 0) {
                 state.currentImage = starterImageUrl;
             } else {
                 state.currentImage = this.images[newPointer];
             }
             return state;
         });
+        this.loadInitialPhotoIfNoImagesLoaded();
     }
 
     showLoader(cb) {
@@ -222,6 +239,10 @@ export default class Photos extends Component {
         });
         let loaderStartedCurrentImage = this.state.currentImage;
 
+        // Note, there is a subtle bug here with how we only have one timeout
+        // It happens when we use this function from loadInitialPhotoIfNoImagesLoaded
+        // then while its running try to use this function with updating the index
+        // Our index gets updated past the end 
         if (!this.timeout) {
             console.log("Showing Loader & Setting timeout to retry next photo");
             this.timeout = setTimeout(function () {
@@ -263,11 +284,12 @@ export default class Photos extends Component {
     }
 
     preloadImages() {
+        //TODO: Bug: It is possible on slow internet to preload too many at a time
         // Only preload images when running in the browser
         if (typeof window !== "undefined") {
             let count = this.calculateNumberOfImagesToPreloadAtOnce();
             if (count <= 0) return;
-            // console.log("Preloading images %d", count, { "this.images.length": this.images.length, "this.currentIndex": this.currentIndex, "this.countOfImagesPreloading": this.countOfImagesPreloading, "this.currentMaxNumberOfImagesToPreload": this.currentMaxNumberOfImagesToPreload })
+            console.log("Preloading images %d", count, { "this.images.length": this.images.length, "this.currentIndex": this.currentIndex, "this.countOfImagesPreloading": this.countOfImagesPreloading, "this.currentMaxNumberOfImagesToPreload": this.currentMaxNumberOfImagesToPreload })
 
             this.countOfImagesPreloading += count;
 
@@ -295,7 +317,7 @@ export default class Photos extends Component {
         if (typeof window === "undefined") {
             photoDiv = null
         } else {
-            photoDiv = <img class={this.state.currentImage == "" ? "PhotoDisplay PhotoPreload" : "PhotoDisplay"} src={this.state.currentImage} alt="" onClick={this.goToNextPhoto} crossorigin="anonymous"></img>
+            photoDiv = <img class="PhotoDisplay" src={this.state.currentImage} alt="" onClick={this.goToNextPhoto} crossorigin="anonymous"></img>
         }
         return (
             // https://grid.layoutit.com/?id=bCPxgJi
