@@ -2,8 +2,8 @@
   "name": "Cats",
   "short_name": "Cats",
   "start_url": "/",
-  "display": "standalone",
-  "orientation": "portrait",
+  "display": "fullscreen",
+  "orientation": "landscape",
   "theme_color": "#d14c3c",
   "background_color": "#f4e9db",
   "icons": [
